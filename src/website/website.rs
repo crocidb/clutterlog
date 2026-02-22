@@ -2,10 +2,15 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
+use super::website_info::{WebsiteInfo, WebsiteInfoError, SITE_TOML};
 
 const DEFAULT_BUILD_DIR: &str = "build";
 const DEFAULT_MEDIA_DIR: &str = "media";
+const DEFAULT_PUBLIC_DIR: &str = "public";
+
+const TEMPLATE_INDEX: &str = include_str!("../../template/index.html");
+const TEMPLATE_STYLE: &str = include_str!("../../template/public/style.css");
+const TEMPLATE_JS: &str = include_str!("../../template/public/clutterlog.js");
 
 #[derive(Debug)]
 pub struct Website {
@@ -66,6 +71,19 @@ impl Website {
 
         let media_path = build_path.join(DEFAULT_MEDIA_DIR);
         fs::create_dir_all(&media_path).map_err(|e| WebsiteError::Io(media_path, e))?;
+
+        let public_path = build_path.join(DEFAULT_PUBLIC_DIR);
+        fs::create_dir_all(&public_path).map_err(|e| WebsiteError::Io(public_path.clone(), e))?;
+
+        // Write template files
+        let index_path = build_path.join("index.html");
+        fs::write(&index_path, TEMPLATE_INDEX).map_err(|e| WebsiteError::Io(index_path, e))?;
+
+        let style_path = public_path.join("style.css");
+        fs::write(&style_path, TEMPLATE_STYLE).map_err(|e| WebsiteError::Io(style_path, e))?;
+
+        let js_path = public_path.join("clutterlog.js");
+        fs::write(&js_path, TEMPLATE_JS).map_err(|e| WebsiteError::Io(js_path, e))?;
 
         Ok(())
     }

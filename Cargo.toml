@@ -5,6 +5,7 @@ edition = "2024"
 description = "An uncurated timeline of unfinished projects"
 authors = [ "Bruno Croci <bruno@croci.me>" ]
 rust-version = "1.90"
+include = ["src/**/*", "template/**/*", "Cargo.toml", "Cargo.lock", "README.md"]
 repository = "https://github.com/CrociDB/clutterlog"
 readme = "README.md"
 homepage = "https://github.com/CrociDB/clutterlog"
