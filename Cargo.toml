@@ -11,6 +11,7 @@ readme = "README.md"
 homepage = "https://github.com/CrociDB/clutterlog"
 
 [dependencies]
+chrono = "0.4"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"

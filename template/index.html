@@ -3,54 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>clutterlog</title>
+    <title>{{title}}</title>
     <link rel="stylesheet" href="public/style.css">
 </head>
 <body>
     <main>
         <header>
-            <h1>clutterlog</h1>
-            <p>An uncurated timeline of unfinished projects</p>
+            <h1>{{title}}</h1>
+            <p>{{description}}</p>
         </header>
         <div id="grid"></div>
         <footer>
-            <p>created by [author] with <a href="https://clutterlog.croci.dev/">clutterlog</a></p>
+            <p>created by {{author}} with <a href="https://clutterlog.croci.dev/">clutterlog</a></p>
         </footer>
     </main>
 
     <script>
-        const CLUTTERLOG_DATA = [
-            { image_url: "https://picsum.photos/seed/cl01/400", title: "LED Matrix Display", description: "First prototype of the 8x8 LED matrix driven by an Arduino Nano", datetime: "2025-01-15T14:30:00" },
-            { image_url: "https://picsum.photos/seed/cl02/400", title: "Mechanical Keyboard", description: "Hand-wired ortholinear keyboard with Cherry MX Browns", datetime: "2025-01-08T09:15:00" },
-            { image_url: "https://picsum.photos/seed/cl03/400", title: "Rust Raytracer", description: "Weekend raytracer rendering spheres with reflections", datetime: "2024-12-28T22:00:00" },
-            { image_url: "https://picsum.photos/seed/cl04/400", title: "PCB Design v1", description: "First revision of the custom breakout board for the RP2040", datetime: "2024-12-20T11:45:00" },
-            { image_url: "https://picsum.photos/seed/cl05/400", title: "Bike Headlight Mount", description: "3D printed mount for the dynamo-powered front light", datetime: "2024-12-12T16:20:00" },
-            { image_url: "https://picsum.photos/seed/cl06/400", title: "Pixel Art Editor", description: "Tiny pixel art editor built with SDL2 and C", datetime: "2024-12-01T08:00:00" },
-            { image_url: "https://picsum.photos/seed/cl07/400", title: "Sourdough Starter", description: "Day 5 of the sourdough starter, finally seeing bubbles", datetime: "2024-11-22T07:30:00" },
-            { image_url: "https://picsum.photos/seed/cl08/400", title: "Synth Module", description: "Breadboard prototype of a simple VCO module", datetime: "2024-11-15T19:00:00" },
-            { image_url: "https://picsum.photos/seed/cl09/400", title: "Book Binding", description: "Coptic stitch binding attempt with recycled cardboard covers", datetime: "2024-11-08T13:10:00" },
-            { image_url: "https://picsum.photos/seed/cl10/400", title: "Gameboy ROM", description: "Hello world running on the Gameboy emulator", datetime: "2024-10-30T21:45:00" },
-            { image_url: "https://picsum.photos/seed/cl11/400", title: "Desk Organizer", description: "Laser-cut plywood desk organizer, first assembly test", datetime: "2024-10-22T10:30:00" },
-            { image_url: "https://picsum.photos/seed/cl12/400", title: "Weather Station", description: "ESP32 weather station with BME280 sensor on the balcony", datetime: "2024-10-14T15:00:00" },
-            { image_url: "https://picsum.photos/seed/cl13/400", title: "Linocut Print", description: "First pull of the cityscape linocut on Japanese paper", datetime: "2024-10-05T12:20:00" },
-            { image_url: "https://picsum.photos/seed/cl14/400", title: "RC Car Chassis", description: "Designing the chassis for a 1:10 scale RC car in FreeCAD", datetime: "2024-09-28T17:40:00" },
-            { image_url: "https://picsum.photos/seed/cl15/400", title: "Cyanotype Prints", description: "Sun-printed cyanotypes of pressed ferns and leaves", datetime: "2024-09-20T11:00:00" },
-            { image_url: "https://picsum.photos/seed/cl16/400", title: "MIDI Controller", description: "Custom MIDI controller with rotary encoders and faders", datetime: "2024-09-12T20:15:00" },
-            { image_url: "https://picsum.photos/seed/cl17/400", title: "Terracotta Planter", description: "Hand-thrown planter on the pottery wheel, pre-firing", datetime: "2024-09-04T09:50:00" },
-            { image_url: "https://picsum.photos/seed/cl18/400", title: "Z80 Computer", description: "Homebrew Z80 computer with 32K RAM on a breadboard", datetime: "2024-08-27T14:30:00" },
-            { image_url: "https://picsum.photos/seed/cl19/400", title: "Knife Handle", description: "Shaping a walnut handle for the kitchen knife restoration", datetime: "2024-08-19T16:00:00" },
-            { image_url: "https://picsum.photos/seed/cl20/400", title: "Procedural Terrain", description: "Perlin noise terrain generation in a fragment shader", datetime: "2024-08-11T23:10:00" },
-            { image_url: "https://picsum.photos/seed/cl21/400", title: "Film Scanner", description: "DIY 35mm film scanner using a macro lens and a light pad", datetime: "2024-08-03T10:45:00" },
-            { image_url: "https://picsum.photos/seed/cl22/400", title: "Concrete Lamp", description: "Casting a concrete lamp shade with a silicone mold", datetime: "2024-07-26T18:20:00" },
-            { image_url: "https://picsum.photos/seed/cl23/400", title: "Drone Frame", description: "Carbon fiber drone frame cut and ready for assembly", datetime: "2024-07-18T08:30:00" },
-            { image_url: "https://picsum.photos/seed/cl24/400", title: "Embroidery Sampler", description: "Cross-stitch sampler with pixel art game characters", datetime: "2024-07-10T13:55:00" },
-            { image_url: "https://picsum.photos/seed/cl25/400", title: "Solar Charger", description: "Portable solar panel charger with USB-C output", datetime: "2024-07-02T15:40:00" },
-            { image_url: "https://picsum.photos/seed/cl26/400", title: "Pen Plotter Art", description: "Generative art output from the AxiDraw pen plotter", datetime: "2024-06-24T20:00:00" },
-            { image_url: "https://picsum.photos/seed/cl27/400", title: "Amp Build", description: "Point-to-point wiring on the guitar tube amp chassis", datetime: "2024-06-16T11:15:00" },
-            { image_url: "https://picsum.photos/seed/cl28/400", title: "Mushroom Log", description: "Shiitake mushroom plugs hammered into an oak log", datetime: "2024-06-08T07:00:00" },
-            { image_url: "https://picsum.photos/seed/cl29/400", title: "Pinhole Camera", description: "Tin can pinhole camera loaded with photo paper", datetime: "2024-05-31T14:25:00" },
-            { image_url: "https://picsum.photos/seed/cl30/400", title: "Woven Basket", description: "Willow basket weaving in progress, halfway through the sides", datetime: "2024-05-23T09:40:00" },
-        ];
+        const CLUTTERLOG_DATA = {{clutterlog_data}};
     </script>
     <script src="public/clutterlog.js"></script>
 </body>
