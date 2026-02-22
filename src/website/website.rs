@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
 
+const DEFAULT_MEDIA_DIR: &str = "media";
+
 #[derive(Debug)]
 pub struct Website {
     pub info: WebsiteInfo,
@@ -20,6 +22,10 @@ impl Website {
             })
         } else {
             fs::create_dir_all(path).map_err(|e| WebsiteError::Io(path.to_path_buf(), e))?;
+
+            let media_path = path.join(DEFAULT_MEDIA_DIR);
+            fs::create_dir_all(&media_path)
+                .map_err(|e| WebsiteError::Io(media_path.to_path_buf(), e))?;
 
             let title = path
                 .file_name()
