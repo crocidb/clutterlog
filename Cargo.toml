@@ -10,3 +10,4 @@ readme = "README.md"
 homepage = "https://github.com/CrociDB/clutterlog"
 
 [dependencies]
+clap = { version = "4", features = ["derive"] }
