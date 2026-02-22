@@ -4,8 +4,8 @@ use std::process::Command;
 use std::time::SystemTime;
 
 use chrono::{DateTime, Utc};
-use image::ImageFormat;
 use image::imageops::FilterType;
+use image::ImageFormat;
 
 use super::website::WebsiteError;
 
@@ -49,7 +49,7 @@ impl WebsiteItem {
 
         let datetime = fs::metadata(path)
             .and_then(|m| m.modified())
-            .map(|t| format_system_time(t))
+            .map(format_system_time)
             .unwrap_or_else(|_| "1970-01-01T00:00:00".to_string());
 
         Some(Self {
@@ -107,42 +107,40 @@ impl WebsiteItem {
         Ok(())
     }
 
+    /// Generate an animated thumbnail for a gif/video file (gif, webm, mp4).
+    /// Uses ffmpeg to produce a center-cropped 350x350 animated WebP of max 2 seconds.
     fn generate_ffmpeg_thumb(&self, thumb_path: &Path) -> Result<(), WebsiteError> {
-        let temp_frame = thumb_path.with_extension("_frame_temp.png");
+        let filter = format!(
+            "crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2,scale={}:{}",
+            THUMB_SIZE, THUMB_SIZE
+        );
 
         let output = Command::new("ffmpeg")
             .args([
                 "-i",
                 self.source_path.to_str().unwrap_or(""),
-                "-vframes",
-                "1",
+                "-t",
+                "2",
+                "-vf",
+                &filter,
+                "-c:v",
+                "libwebp_anim",
+                "-loop",
+                "0",
+                "-an",
                 "-y",
-                temp_frame.to_str().unwrap_or(""),
+                thumb_path.to_str().unwrap_or(""),
             ])
             .output()
             .map_err(|e| WebsiteError::Ffmpeg(self.source_path.clone(), e.to_string()))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            // Clean up temp file if it exists
-            let _ = fs::remove_file(&temp_frame);
             return Err(WebsiteError::Ffmpeg(
                 self.source_path.clone(),
                 format!("ffmpeg exited with {}: {}", output.status, stderr),
             ));
         }
-
-        let img =
-            image::open(&temp_frame).map_err(|e| WebsiteError::Image(temp_frame.clone(), e))?;
-
-        let thumb = center_crop_resize(&img, THUMB_SIZE);
-
-        thumb
-            .save_with_format(thumb_path, ImageFormat::WebP)
-            .map_err(|e| WebsiteError::Image(thumb_path.to_path_buf(), e))?;
-
-        // Clean up temp file
-        let _ = fs::remove_file(&temp_frame);
 
         Ok(())
     }
