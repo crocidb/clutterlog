@@ -14,6 +14,12 @@ const SUPPORTED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "webp", "gif", "webm", "m
 
 const THUMB_SIZE: u32 = 350;
 
+pub struct GenerationResult {
+    pub filename: String,
+    pub media_size: u64,
+    pub thumb_size: u64,
+}
+
 pub struct WebsiteItem {
     pub filename: String,
     pub title: String,
@@ -73,9 +79,13 @@ impl WebsiteItem {
         }
     }
 
-    pub fn copy_and_generate_thumb(&self, dest_media: &Path) -> Result<(), WebsiteError> {
+    pub fn copy_and_generate_thumb(
+        &self,
+        dest_media: &Path,
+    ) -> Result<GenerationResult, WebsiteError> {
         let dest_file = dest_media.join(&self.filename);
-        fs::copy(&self.source_path, &dest_file).map_err(|e| WebsiteError::Io(dest_file, e))?;
+        fs::copy(&self.source_path, &dest_file)
+            .map_err(|e| WebsiteError::Io(dest_file.clone(), e))?;
 
         let thumb_path = dest_media.join(self.thumb_filename());
 
@@ -85,7 +95,18 @@ impl WebsiteItem {
             self.generate_image_thumb(&thumb_path)?;
         }
 
-        Ok(())
+        let media_size = fs::metadata(&dest_file)
+            .map_err(|e| WebsiteError::Io(dest_file.clone(), e))?
+            .len();
+        let thumb_size = fs::metadata(&thumb_path)
+            .map_err(|e| WebsiteError::Io(thumb_path.clone(), e))?
+            .len();
+
+        Ok(GenerationResult {
+            filename: self.filename.clone(),
+            media_size,
+            thumb_size,
+        })
     }
 
     fn generate_image_thumb(&self, thumb_path: &Path) -> Result<(), WebsiteError> {

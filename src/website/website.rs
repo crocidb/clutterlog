@@ -1,9 +1,10 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use super::website_info::{WebsiteInfo, WebsiteInfoError, SITE_TOML};
-use super::website_item::WebsiteItem;
+use super::website_item::{GenerationResult, WebsiteItem};
 
 const DEFAULT_BUILD_DIR: &str = "build";
 const DEFAULT_MEDIA_DIR: &str = "media";
@@ -12,6 +13,78 @@ const DEFAULT_PUBLIC_DIR: &str = "public";
 const TEMPLATE_INDEX: &str = include_str!("../../template/index.html");
 const TEMPLATE_STYLE: &str = include_str!("../../template/public/style.css");
 const TEMPLATE_JS: &str = include_str!("../../template/public/clutterlog.js");
+
+pub struct BuildReport {
+    pub items_processed: usize,
+    pub total_media_size: u64,
+    pub total_thumbs_size: u64,
+    pub processing_time: Duration,
+}
+
+impl BuildReport {
+    fn from_results(results: Vec<GenerationResult>, processing_time: Duration) -> Self {
+        let items_processed = results.len();
+        let total_media_size = results.iter().map(|r| r.media_size).sum();
+        let total_thumbs_size = results.iter().map(|r| r.thumb_size).sum();
+        Self {
+            items_processed,
+            total_media_size,
+            total_thumbs_size,
+            processing_time,
+        }
+    }
+}
+
+impl std::fmt::Display for BuildReport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Build report:")?;
+        writeln!(f, "  Items processed: {}", self.items_processed)?;
+        writeln!(
+            f,
+            "  Total media size: {}",
+            format_size(self.total_media_size)
+        )?;
+        writeln!(
+            f,
+            "  Total thumbs size: {}",
+            format_size(self.total_thumbs_size)
+        )?;
+        write!(
+            f,
+            "  Processing time: {}",
+            format_duration(self.processing_time)
+        )
+    }
+}
+
+fn format_duration(duration: Duration) -> String {
+    let total_secs = duration.as_secs_f64();
+    if total_secs < 1.0 {
+        format!("{:.0}ms", duration.as_millis())
+    } else if total_secs < 60.0 {
+        format!("{:.2}s", total_secs)
+    } else {
+        let mins = duration.as_secs() / 60;
+        let secs = total_secs - (mins as f64 * 60.0);
+        format!("{}m {:.2}s", mins, secs)
+    }
+}
+
+fn format_size(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = 1024 * KB;
+    const GB: u64 = 1024 * MB;
+
+    if bytes >= GB {
+        format!("{:.2} GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.2} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.2} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{} B", bytes)
+    }
+}
 
 #[derive(Debug)]
 pub struct Website {
@@ -66,7 +139,8 @@ impl Website {
         }
     }
 
-    pub fn build(&self) -> Result<(), WebsiteError> {
+    pub fn build(&self) -> Result<BuildReport, WebsiteError> {
+        let start = Instant::now();
         let build_path = self.path.join(DEFAULT_BUILD_DIR);
         fs::create_dir_all(&build_path).map_err(|e| WebsiteError::Io(build_path.clone(), e))?;
 
@@ -79,7 +153,8 @@ impl Website {
 
         // Scan source media directory, copy files, generate thumbnails, and collect data entries
         let source_media_path = self.path.join(DEFAULT_MEDIA_DIR);
-        let clutterlog_data = self.scan_and_copy_media(&source_media_path, &build_media_path)?;
+        let (clutterlog_data, generation_results) =
+            self.scan_and_copy_media(&source_media_path, &build_media_path)?;
 
         // Render index.html from template
         let rendered = TEMPLATE_INDEX
@@ -98,19 +173,23 @@ impl Website {
         let js_path = public_path.join("clutterlog.js");
         fs::write(&js_path, TEMPLATE_JS).map_err(|e| WebsiteError::Io(js_path, e))?;
 
-        Ok(())
+        Ok(BuildReport::from_results(
+            generation_results,
+            start.elapsed(),
+        ))
     }
 
     fn scan_and_copy_media(
         &self,
         source_path: &Path,
         dest_path: &Path,
-    ) -> Result<String, WebsiteError> {
+    ) -> Result<(String, Vec<GenerationResult>), WebsiteError> {
         let mut entries: Vec<String> = Vec::new();
+        let mut results: Vec<GenerationResult> = Vec::new();
         let base_url = self.info.url.trim_end_matches('/');
 
         if !source_path.exists() {
-            return Ok("[]".to_string());
+            return Ok(("[]".to_string(), results));
         }
 
         let dir_entries = fs::read_dir(source_path)
@@ -125,15 +204,18 @@ impl Website {
                 None => continue,
             };
 
-            item.copy_and_generate_thumb(dest_path)?;
+            let result = item.copy_and_generate_thumb(dest_path)?;
+            results.push(result);
             entries.push(item.to_json_entry(base_url, DEFAULT_MEDIA_DIR));
         }
 
-        if entries.is_empty() {
-            Ok("[]".to_string())
+        let json = if entries.is_empty() {
+            "[]".to_string()
         } else {
-            Ok(format!("[\n{}\n        ]", entries.join(",\n")))
-        }
+            format!("[\n{}\n        ]", entries.join(",\n"))
+        };
+
+        Ok((json, results))
     }
 }
 

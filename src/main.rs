@@ -47,8 +47,9 @@ fn main() {
             let path = Path::new(".");
             match Website::load(path) {
                 Ok(website) => match website.build() {
-                    Ok(()) => {
-                        println!("Site '{}' built successfully", website.info.title);
+                    Ok(report) => {
+                        println!("Site '{}' built successfully\n", website.info.title);
+                        println!("{}", report);
                     }
                     Err(e) => {
                         eprintln!("Error building site: {}", e);
