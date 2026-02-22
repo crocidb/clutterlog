@@ -1,4 +1,9 @@
+mod website;
+
+use std::path::Path;
+
 use clap::{Parser, Subcommand};
+use website::Website;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -21,7 +26,20 @@ fn main() {
 
     match cli.command {
         Commands::New { site_name } => {
-            println!("Creating new site: {}", site_name);
+            let path = Path::new(&site_name);
+            match Website::new(path) {
+                Ok(website) => {
+                    println!(
+                        "Created new site '{}' at '{}'",
+                        website.info.title,
+                        website.path.display()
+                    );
+                }
+                Err(e) => {
+                    eprintln!("Error creating site: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
     }
 }
