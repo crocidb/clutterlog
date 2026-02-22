@@ -19,6 +19,8 @@ enum Commands {
         /// Name of the site to create
         site_name: String,
     },
+    /// Build the site in the current directory
+    Build,
 }
 
 fn main() {
@@ -37,6 +39,24 @@ fn main() {
                 }
                 Err(e) => {
                     eprintln!("Error creating site: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+        Commands::Build => {
+            let path = Path::new(".");
+            match Website::load(path) {
+                Ok(website) => match website.build() {
+                    Ok(()) => {
+                        println!("Site '{}' built successfully", website.info.title);
+                    }
+                    Err(e) => {
+                        eprintln!("Error building site: {}", e);
+                        std::process::exit(1);
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Error: {}", e);
                     std::process::exit(1);
                 }
             }

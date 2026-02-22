@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
 
+const DEFAULT_BUILD_DIR: &str = "build";
 const DEFAULT_MEDIA_DIR: &str = "media";
 
 #[derive(Debug)]
@@ -13,6 +14,21 @@ pub struct Website {
 }
 
 impl Website {
+    pub fn load(path: &Path) -> Result<Self, WebsiteError> {
+        if !path.join(SITE_TOML).exists() {
+            let abs = path
+                .canonicalize()
+                .map_err(|_| WebsiteError::NotAPath(path.to_path_buf()))?;
+            return Err(WebsiteError::NotASite(abs.to_path_buf()));
+        }
+
+        let info = WebsiteInfo::from_file(path)?;
+        Ok(Self {
+            info,
+            path: path.to_path_buf(),
+        })
+    }
+
     pub fn new(path: &Path) -> Result<Self, WebsiteError> {
         if path.join(SITE_TOML).exists() {
             let info = WebsiteInfo::from_file(path)?;
@@ -43,12 +59,24 @@ impl Website {
             })
         }
     }
+
+    pub fn build(&self) -> Result<(), WebsiteError> {
+        let build_path = self.path.join(DEFAULT_BUILD_DIR);
+        fs::create_dir_all(&build_path).map_err(|e| WebsiteError::Io(build_path.clone(), e))?;
+
+        let media_path = build_path.join(DEFAULT_MEDIA_DIR);
+        fs::create_dir_all(&media_path).map_err(|e| WebsiteError::Io(media_path, e))?;
+
+        Ok(())
+    }
 }
 
 // Error
 
 #[derive(Debug)]
 pub enum WebsiteError {
+    NotASite(PathBuf),
+    NotAPath(PathBuf),
     Info(WebsiteInfoError),
     Io(PathBuf, io::Error),
     Serialize(toml::ser::Error),
@@ -57,6 +85,24 @@ pub enum WebsiteError {
 impl std::fmt::Display for WebsiteError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            WebsiteError::NotASite(path) => {
+                write!(
+                    f,
+                    "'{}' is not a clutterlog site (missing site.toml)",
+                    path.display()
+                )
+            }
+            WebsiteError::NotAPath(path) => {
+                let abs = if path.is_absolute() {
+                    path.to_path_buf()
+                } else if let Ok(currentdir) = std::env::current_dir() {
+                    currentdir.join(path)
+                } else {
+                    path.to_path_buf()
+                };
+
+                write!(f, "'{}' is not a valid path", abs.display())
+            }
             WebsiteError::Info(err) => write!(f, "{}", err),
             WebsiteError::Io(path, err) => {
                 write!(f, "failed to write '{}': {}", path.display(), err)
