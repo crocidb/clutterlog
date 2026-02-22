@@ -13,5 +13,6 @@ homepage = "https://github.com/CrociDB/clutterlog"
 [dependencies]
 chrono = "0.4"
 clap = { version = "4", features = ["derive"] }
+image = "0.25"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"

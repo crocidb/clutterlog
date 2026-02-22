@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
         item.className = "grid-item";
 
         var img = document.createElement("img");
-        img.src = entry.image_url;
+        img.src = entry.thumb_url;
         img.alt = entry.description;
         img.loading = "lazy";
 

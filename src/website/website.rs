@@ -1,17 +1,13 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
-
-use chrono::{DateTime, Utc};
 
 use super::website_info::{WebsiteInfo, WebsiteInfoError, SITE_TOML};
+use super::website_item::WebsiteItem;
 
 const DEFAULT_BUILD_DIR: &str = "build";
 const DEFAULT_MEDIA_DIR: &str = "media";
 const DEFAULT_PUBLIC_DIR: &str = "public";
-
-const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
 
 const TEMPLATE_INDEX: &str = include_str!("../../template/index.html");
 const TEMPLATE_STYLE: &str = include_str!("../../template/public/style.css");
@@ -81,7 +77,7 @@ impl Website {
         let public_path = build_path.join(DEFAULT_PUBLIC_DIR);
         fs::create_dir_all(&public_path).map_err(|e| WebsiteError::Io(public_path.clone(), e))?;
 
-        // Scan source media directory for images, copy them, and collect data entries
+        // Scan source media directory, copy files, generate thumbnails, and collect data entries
         let source_media_path = self.path.join(DEFAULT_MEDIA_DIR);
         let clutterlog_data = self.scan_and_copy_media(&source_media_path, &build_media_path)?;
 
@@ -124,52 +120,13 @@ impl Website {
             let entry = entry.map_err(|e| WebsiteError::Io(source_path.to_path_buf(), e))?;
             let path = entry.path();
 
-            if !path.is_file() {
-                continue;
-            }
-
-            let extension = path
-                .extension()
-                .and_then(|ext| ext.to_str())
-                .map(|ext| ext.to_lowercase());
-
-            let is_image = extension
-                .as_ref()
-                .is_some_and(|ext| IMAGE_EXTENSIONS.contains(&ext.as_str()));
-
-            if !is_image {
-                continue;
-            }
-
-            let filename = match path.file_name().and_then(|n| n.to_str()) {
-                Some(name) => name.to_string(),
+            let item = match WebsiteItem::from_path(&path) {
+                Some(item) => item,
                 None => continue,
             };
 
-            let title = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("")
-                .to_string();
-
-            // Get modified time from file metadata
-            let datetime = fs::metadata(&path)
-                .and_then(|m| m.modified())
-                .map(|t| format_system_time(t))
-                .unwrap_or_else(|_| "1970-01-01T00:00:00".to_string());
-
-            // Copy file to build/media/
-            let dest_file = dest_path.join(&filename);
-            fs::copy(&path, &dest_file).map_err(|e| WebsiteError::Io(dest_file, e))?;
-
-            // Build JSON entry
-            let image_url = format!("{}/{}/{}", base_url, DEFAULT_MEDIA_DIR, filename);
-            entries.push(format!(
-                "            {{ \"image_url\": \"{}\", \"title\": \"{}\", \"description\": \"\", \"datetime\": \"{}\" }}",
-                escape_js(&image_url),
-                escape_js(&title),
-                escape_js(&datetime),
-            ));
+            item.copy_and_generate_thumb(dest_path)?;
+            entries.push(item.to_json_entry(base_url, DEFAULT_MEDIA_DIR));
         }
 
         if entries.is_empty() {
@@ -189,6 +146,8 @@ pub enum WebsiteError {
     Info(WebsiteInfoError),
     Io(PathBuf, io::Error),
     Serialize(toml::ser::Error),
+    Image(PathBuf, image::ImageError),
+    Ffmpeg(PathBuf, String),
 }
 
 impl std::fmt::Display for WebsiteError {
@@ -217,6 +176,17 @@ impl std::fmt::Display for WebsiteError {
                 write!(f, "failed to write '{}': {}", path.display(), err)
             }
             WebsiteError::Serialize(err) => write!(f, "failed to serialize site info: {}", err),
+            WebsiteError::Image(path, err) => {
+                write!(f, "failed to process image '{}': {}", path.display(), err)
+            }
+            WebsiteError::Ffmpeg(path, err) => {
+                write!(
+                    f,
+                    "failed to extract video frame from '{}': {}",
+                    path.display(),
+                    err
+                )
+            }
         }
     }
 }
@@ -229,21 +199,9 @@ impl From<WebsiteInfoError> for WebsiteError {
     }
 }
 
-fn format_system_time(time: SystemTime) -> String {
-    let dt: DateTime<Utc> = time.into();
-    dt.format("%Y-%m-%dT%H:%M:%S").to_string()
-}
-
 fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
-}
-
-fn escape_js(s: &str) -> String {
-    s.replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
 }
