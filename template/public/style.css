@@ -1,1 +1,144 @@
 /* clutterlog styles */
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+    min-height: 100vh;
+}
+
+main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+}
+
+/* Header */
+
+header {
+    text-align: center;
+    padding: 48px 16px 40px;
+}
+
+header h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+header p {
+    font-size: 1.05rem;
+    color: #888;
+    font-weight: 400;
+}
+
+/* Grid */
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 4px;
+}
+
+/* Grid Item */
+
+.grid-item {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background-color: #2a2a2a;
+    cursor: pointer;
+}
+
+.grid-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.grid-item:hover img {
+    transform: scale(1.05);
+}
+
+/* Overlay */
+
+.grid-item .overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 32px 14px 14px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0) 100%);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.grid-item:hover .overlay {
+    transform: translateY(0);
+}
+
+.overlay .item-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.overlay .item-description {
+    font-size: 0.75rem;
+    color: #ccc;
+    line-height: 1.4;
+}
+
+.overlay .item-date {
+    font-size: 0.65rem;
+    color: #888;
+    margin-top: 6px;
+}
+
+/* Footer */
+
+footer {
+    text-align: center;
+    padding: 40px 16px 24px;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+footer a {
+    color: #888;
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: #f0f0f0;
+}
+
+/* Responsive adjustments */
+
+@media (max-width: 600px) {
+    header {
+        padding: 32px 12px 28px;
+    }
+
+    header h1 {
+        font-size: 1.8rem;
+    }
+
+    #grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 3px;
+    }
+}
