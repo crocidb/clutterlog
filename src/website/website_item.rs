@@ -10,7 +10,7 @@ use image::{DynamicImage, ImageDecoder, ImageFormat, ImageReader};
 use super::website::WebsiteError;
 
 const ANIMATED_EXTENSIONS: &[&str] = &["gif", "webm", "mp4"];
-pub const SUPPORTED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "webp", "gif", "webm", "mp4"];
+pub const SUPPORTED_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "gif", "webm", "mp4"];
 
 const THUMB_SIZE: u32 = 350;
 
