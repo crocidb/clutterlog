@@ -1,9 +1,8 @@
-use std::fs;
-use std::io;
+use std::fs::{self, File};
+use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::website_item::SUPPORTED_EXTENSIONS;
@@ -146,33 +145,61 @@ impl MediaLibrary {
 }
 
 fn extract_oldest_date(path: &Path) -> String {
-    let metadata = match fs::metadata(path) {
-        Ok(m) => m,
-        Err(_) => return "1970-01-01T00:00:00".to_string(),
-    };
+    let mut candidates: Vec<DateTime<Utc>> = Vec::new();
 
-    let modified = metadata.modified().ok();
-    let created = metadata.created().ok();
+    // Try EXIF metadata for supported image formats
+    if let Some(exif_dt) = extract_exif_date(path) {
+        candidates.push(exif_dt);
+    }
 
-    let oldest = match (created, modified) {
-        (Some(c), Some(m)) => {
-            if c < m {
-                c
-            } else {
-                m
-            }
+    // Filesystem timestamps
+    if let Ok(metadata) = fs::metadata(path) {
+        if let Ok(created) = metadata.created() {
+            let dt: DateTime<Utc> = created.into();
+            candidates.push(dt);
         }
-        (Some(c), None) => c,
-        (None, Some(m)) => m,
-        (None, None) => return "1970-01-01T00:00:00".to_string(),
-    };
+        if let Ok(modified) = metadata.modified() {
+            let dt: DateTime<Utc> = modified.into();
+            candidates.push(dt);
+        }
+    }
 
-    format_system_time(oldest)
+    match candidates.iter().min() {
+        Some(oldest) => oldest.format("%Y-%m-%dT%H:%M:%S").to_string(),
+        None => "1970-01-01T00:00:00".to_string(),
+    }
 }
 
-fn format_system_time(time: SystemTime) -> String {
-    let dt: DateTime<Utc> = time.into();
-    dt.format("%Y-%m-%dT%H:%M:%S").to_string()
+/// Attempts to extract a date from EXIF metadata embedded in an image file.
+/// Checks DateTimeOriginal, DateTimeDigitized, and DateTime fields in that order.
+/// Returns `None` for unsupported formats, missing EXIF data, or parse errors.
+fn extract_exif_date(path: &Path) -> Option<DateTime<Utc>> {
+    let extension = path.extension()?.to_str()?.to_lowercase();
+    if !["jpg", "jpeg", "webp", "tiff", "tif"].contains(&extension.as_str()) {
+        return None;
+    }
+
+    let file = File::open(path).ok()?;
+    let mut reader = BufReader::new(file);
+    let exif_data = exif::Reader::new().read_from_container(&mut reader).ok()?;
+
+    let date_tags = [
+        exif::Tag::DateTimeOriginal,
+        exif::Tag::DateTimeDigitized,
+        exif::Tag::DateTime,
+    ];
+
+    for tag in &date_tags {
+        if let Some(field) = exif_data.get_field(*tag, exif::In::PRIMARY) {
+            let value = field.display_value().to_string();
+            // EXIF dates are formatted as "YYYY-MM-DD HH:MM:SS"
+            if let Ok(naive) = NaiveDateTime::parse_from_str(&value, "%Y-%m-%d %H:%M:%S") {
+                return Some(naive.and_utc());
+            }
+        }
+    }
+
+    None
 }
 
 // Error
