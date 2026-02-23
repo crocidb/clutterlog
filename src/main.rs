@@ -3,7 +3,7 @@ mod website;
 use std::path::Path;
 
 use clap::{Parser, Subcommand};
-use website::Website;
+use website::{MediaLibrary, Website};
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -21,6 +21,8 @@ enum Commands {
     },
     /// Build the site in the current directory
     Build,
+    /// Update media metadata in the current directory
+    Update,
 }
 
 fn main() {
@@ -56,6 +58,35 @@ fn main() {
                         std::process::exit(1);
                     }
                 },
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+        Commands::Update => {
+            let path = Path::new(".");
+            match Website::load(path) {
+                Ok(website) => {
+                    let mut library = match MediaLibrary::new(&website.path) {
+                        Ok(lib) => lib,
+                        Err(e) => {
+                            eprintln!("Error loading media library: {}", e);
+                            std::process::exit(1);
+                        }
+                    };
+
+                    let media_path = website.path.join("media");
+                    match library.update_metadata(&media_path) {
+                        Ok(report) => {
+                            println!("Updated metadata: {}", report);
+                        }
+                        Err(e) => {
+                            eprintln!("Error updating metadata: {}", e);
+                            std::process::exit(1);
+                        }
+                    }
+                }
                 Err(e) => {
                     eprintln!("Error: {}", e);
                     std::process::exit(1);

@@ -1,7 +1,7 @@
-use std::{fs, io};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::SystemTime;
+use std::{fs, io};
 
 use chrono::{DateTime, Utc};
 use image::ImageFormat;
@@ -10,7 +10,7 @@ use image::imageops::FilterType;
 use super::website::WebsiteError;
 
 const ANIMATED_EXTENSIONS: &[&str] = &["gif", "webm", "mp4"];
-const SUPPORTED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "webp", "gif", "webm", "mp4"];
+pub const SUPPORTED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "webp", "gif", "webm", "mp4"];
 
 const THUMB_SIZE: u32 = 350;
 
@@ -29,7 +29,7 @@ pub struct WebsiteItem {
 }
 
 impl WebsiteItem {
-    pub fn from_path(path: &Path) -> Option<Self> {
+    pub fn from_path(path: &Path, datetime: Option<&str>) -> Option<Self> {
         if !path.is_file() {
             return None;
         }
@@ -53,10 +53,13 @@ impl WebsiteItem {
             .unwrap_or("")
             .to_string();
 
-        let datetime = fs::metadata(path)
-            .and_then(|m| m.modified())
-            .map(format_system_time)
-            .unwrap_or_else(|_| "1970-01-01T00:00:00".to_string());
+        let datetime = match datetime {
+            Some(dt) => dt.to_string(),
+            None => fs::metadata(path)
+                .and_then(|m| m.modified())
+                .map(format_system_time)
+                .unwrap_or_else(|_| "1970-01-01T00:00:00".to_string()),
+        };
 
         Some(Self {
             filename,

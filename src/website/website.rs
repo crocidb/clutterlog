@@ -3,7 +3,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use super::website_info::{WebsiteInfo, WebsiteInfoError, SITE_TOML};
+use super::media_library::{MediaLibrary, MediaLibraryError};
+use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
 use super::website_item::{GenerationResult, WebsiteItem};
 
 const DEFAULT_BUILD_DIR: &str = "build";
@@ -151,10 +152,14 @@ impl Website {
         let public_path = build_path.join(DEFAULT_PUBLIC_DIR);
         fs::create_dir_all(&public_path).map_err(|e| WebsiteError::Io(public_path.clone(), e))?;
 
-        // Scan source media directory, copy files, generate thumbnails, and collect data entries
+        // Update media metadata before scanning
         let source_media_path = self.path.join(DEFAULT_MEDIA_DIR);
+        let mut library = MediaLibrary::new(&self.path)?;
+        library.update_metadata(&source_media_path)?;
+
+        // Scan source media directory, copy files, generate thumbnails, and collect data entries
         let (clutterlog_data, generation_results) =
-            self.scan_and_copy_media(&source_media_path, &build_media_path)?;
+            self.scan_and_copy_media(&source_media_path, &build_media_path, &library)?;
 
         // Render index.html from template
         let rendered = TEMPLATE_INDEX
@@ -183,6 +188,7 @@ impl Website {
         &self,
         source_path: &Path,
         dest_path: &Path,
+        library: &MediaLibrary,
     ) -> Result<(String, Vec<GenerationResult>), WebsiteError> {
         let mut entries: Vec<String> = Vec::new();
         let mut results: Vec<GenerationResult> = Vec::new();
@@ -199,7 +205,10 @@ impl Website {
             let entry = entry.map_err(|e| WebsiteError::Io(source_path.to_path_buf(), e))?;
             let path = entry.path();
 
-            let item = match WebsiteItem::from_path(&path) {
+            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let datetime = library.get_datetime(filename);
+
+            let item = match WebsiteItem::from_path(&path, datetime) {
                 Some(item) => item,
                 None => continue,
             };
@@ -226,6 +235,7 @@ pub enum WebsiteError {
     NotASite(PathBuf),
     NotAPath(PathBuf),
     Info(WebsiteInfoError),
+    MediaLibrary(MediaLibraryError),
     Io(PathBuf, io::Error),
     Serialize(toml::ser::Error),
     Image(PathBuf, image::ImageError),
@@ -255,6 +265,7 @@ impl std::fmt::Display for WebsiteError {
                 write!(f, "'{}' is not a valid path", abs.display())
             }
             WebsiteError::Info(err) => write!(f, "{}", err),
+            WebsiteError::MediaLibrary(err) => write!(f, "{}", err),
             WebsiteError::Io(path, err) => {
                 write!(f, "failed to write '{}': {}", path.display(), err)
             }
@@ -271,11 +282,7 @@ impl std::fmt::Display for WebsiteError {
                 )
             }
             WebsiteError::FfmpegNotFound(err) => {
-                write!(
-                    f,
-                    "looks like `ffmpeg` is not installed: {}",
-                    err
-                )
+                write!(f, "looks like `ffmpeg` is not installed: {}", err)
             }
         }
     }
@@ -286,6 +293,12 @@ impl std::error::Error for WebsiteError {}
 impl From<WebsiteInfoError> for WebsiteError {
     fn from(err: WebsiteInfoError) -> Self {
         WebsiteError::Info(err)
+    }
+}
+
+impl From<MediaLibraryError> for WebsiteError {
+    fn from(err: MediaLibraryError) -> Self {
+        WebsiteError::MediaLibrary(err)
     }
 }
 
