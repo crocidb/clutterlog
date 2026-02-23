@@ -1,11 +1,11 @@
-use std::fs;
+use std::{fs, io};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::SystemTime;
 
 use chrono::{DateTime, Utc};
-use image::imageops::FilterType;
 use image::ImageFormat;
+use image::imageops::FilterType;
 
 use super::website::WebsiteError;
 
@@ -153,7 +153,13 @@ impl WebsiteItem {
                 thumb_path.to_str().unwrap_or(""),
             ])
             .output()
-            .map_err(|e| WebsiteError::Ffmpeg(self.source_path.clone(), e.to_string()))?;
+            .map_err(|e: io::Error| {
+                if e.kind() == io::ErrorKind::NotFound {
+                    WebsiteError::FfmpegNotFound(e.to_string())
+                } else {
+                    WebsiteError::Ffmpeg(self.source_path.clone(), e.to_string())
+                }
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

@@ -230,6 +230,7 @@ pub enum WebsiteError {
     Serialize(toml::ser::Error),
     Image(PathBuf, image::ImageError),
     Ffmpeg(PathBuf, String),
+    FfmpegNotFound(String),
 }
 
 impl std::fmt::Display for WebsiteError {
@@ -266,6 +267,13 @@ impl std::fmt::Display for WebsiteError {
                     f,
                     "failed to extract video frame from '{}': {}",
                     path.display(),
+                    err
+                )
+            }
+            WebsiteError::FfmpegNotFound(err) => {
+                write!(
+                    f,
+                    "looks like `ffmpeg` is not installed: {}",
                     err
                 )
             }
