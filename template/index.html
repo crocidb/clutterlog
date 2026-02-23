@@ -18,6 +18,20 @@
         </footer>
     </main>
 
+    <div id="lightbox" class="lightbox" hidden>
+        <div class="lightbox-backdrop" id="lightbox-backdrop"></div>
+        <div class="lightbox-controls">
+            <button class="lightbox-btn" id="lightbox-zoom-in" title="Zoom in">+</button>
+            <button class="lightbox-btn" id="lightbox-zoom-out" title="Zoom out">&minus;</button>
+            <button class="lightbox-btn" id="lightbox-zoom-reset" title="Reset zoom">1:1</button>
+        </div>
+        <button class="lightbox-btn lightbox-close" id="lightbox-close" title="Close">&times;</button>
+        <button class="lightbox-nav lightbox-prev" id="lightbox-prev" title="Previous">&lsaquo;</button>
+        <button class="lightbox-nav lightbox-next" id="lightbox-next" title="Next">&rsaquo;</button>
+        <div class="lightbox-content" id="lightbox-content"></div>
+        <div class="lightbox-info" id="lightbox-info"></div>
+    </div>
+
     <script>
         const CLUTTERLOG_DATA = {{clutterlog_data}};
     </script>
