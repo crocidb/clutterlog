@@ -4,8 +4,8 @@ use std::time::SystemTime;
 use std::{fs, io};
 
 use chrono::{DateTime, Utc};
-use image::ImageFormat;
 use image::imageops::FilterType;
+use image::{DynamicImage, ImageDecoder, ImageFormat, ImageReader};
 
 use super::website::WebsiteError;
 
@@ -113,8 +113,16 @@ impl WebsiteItem {
     }
 
     fn generate_image_thumb(&self, thumb_path: &Path) -> Result<(), WebsiteError> {
-        let img = image::open(&self.source_path)
+        let mut decoder = ImageReader::open(&self.source_path)
+            .map_err(|e| WebsiteError::Io(self.source_path.clone(), e))?
+            .into_decoder()
             .map_err(|e| WebsiteError::Image(self.source_path.clone(), e))?;
+        let orientation = decoder
+            .orientation()
+            .map_err(|e| WebsiteError::Image(self.source_path.clone(), e))?;
+        let mut img = DynamicImage::from_decoder(decoder)
+            .map_err(|e| WebsiteError::Image(self.source_path.clone(), e))?;
+        img.apply_orientation(orientation);
 
         let thumb = center_crop_resize(&img, THUMB_SIZE);
 
