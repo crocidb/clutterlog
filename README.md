@@ -123,3 +123,7 @@ The generated site includes a responsive grid gallery with:
 - ⌨️ **Keyboard navigation** — arrow keys for previous/next, Escape to close
 - 🔗 **Deep linking** — URL hash updates when viewing items, so you can share direct links
 - ▶️ **Video playback** — MP4 and WebM files play inline with native controls, autoplay, and looping
+
+## 📄 License
+
+This project is licensed under the [BSD 3-Clause License](LICENSE).
