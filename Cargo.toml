@@ -19,3 +19,8 @@ image = "0.25"
 rayon = "1.10"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
