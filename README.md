@@ -1,10 +1,8 @@
-<h1 align="center">🗂️ clutterlog</h1>
+<h1 align="center">clutterlog</h1>
 <p align="center">A way to display your WIPs</p>
 
----
-
 <p align="center">
-  <em><!-- TODO: create a screenshot --></em>
+  <video src="media/clutterlog-example.webm" autoplay loop muted playsinline width="720"></video>
 </p>
 
 **clutterlog** is a static gallery website generator for your creative WIPs. Drop photos, GIFs, and videos into a folder and clutterlog builds a self-contained, dark-themed gallery site that displays them in chronological order. No curation, no context, just a dump of your creative mess. Let people see how you create.
