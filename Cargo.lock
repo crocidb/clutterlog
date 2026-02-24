@@ -296,6 +296,7 @@ dependencies = [
  "clap",
  "image",
  "kamadak-exif",
+ "rayon",
  "serde",
  "toml",
 ]

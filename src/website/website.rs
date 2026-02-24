@@ -3,8 +3,10 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use rayon::prelude::*;
+
 use super::media_library::{MediaLibrary, MediaLibraryError};
-use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
+use super::website_info::{WebsiteInfo, WebsiteInfoError, SITE_TOML};
 use super::website_item::{GenerationResult, WebsiteItem};
 
 const DEFAULT_BUILD_DIR: &str = "build";
@@ -190,32 +192,44 @@ impl Website {
         dest_path: &Path,
         library: &MediaLibrary,
     ) -> Result<(String, Vec<GenerationResult>), WebsiteError> {
-        let mut entries: Vec<String> = Vec::new();
-        let mut results: Vec<GenerationResult> = Vec::new();
         let base_url = self.info.url.trim_end_matches('/');
 
         if !source_path.exists() {
-            return Ok(("[]".to_string(), results));
+            return Ok(("[]".to_string(), Vec::new()));
         }
 
         let dir_entries = fs::read_dir(source_path)
             .map_err(|e| WebsiteError::Io(source_path.to_path_buf(), e))?;
 
-        for entry in dir_entries {
-            let entry = entry.map_err(|e| WebsiteError::Io(source_path.to_path_buf(), e))?;
-            let path = entry.path();
+        // Collect directory entries so we can process them in parallel
+        let items: Vec<(PathBuf, Option<String>)> = dir_entries
+            .filter_map(|entry| {
+                let entry = entry.ok()?;
+                let path = entry.path();
+                let filename = path.file_name().and_then(|n| n.to_str())?;
+                let datetime = library.get_datetime(filename).map(|s| s.to_string());
+                Some((path, datetime))
+            })
+            .collect();
 
-            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            let datetime = library.get_datetime(filename);
+        // Process items in parallel: copy files and generate thumbnails
+        let processed: Vec<Result<(GenerationResult, String), WebsiteError>> = items
+            .par_iter()
+            .filter_map(|(path, datetime)| {
+                let item = WebsiteItem::from_path(path, datetime.as_deref())?;
+                let result = item.copy_and_generate_thumb(dest_path);
+                let entry = item.to_json_entry(base_url, DEFAULT_MEDIA_DIR);
+                Some(result.map(|r| (r, entry)))
+            })
+            .collect();
 
-            let item = match WebsiteItem::from_path(&path, datetime) {
-                Some(item) => item,
-                None => continue,
-            };
-
-            let result = item.copy_and_generate_thumb(dest_path)?;
-            results.push(result);
-            entries.push(item.to_json_entry(base_url, DEFAULT_MEDIA_DIR));
+        // Collect results, propagating any errors
+        let mut results: Vec<GenerationResult> = Vec::new();
+        let mut entries: Vec<String> = Vec::new();
+        for item_result in processed {
+            let (gen_result, entry) = item_result?;
+            results.push(gen_result);
+            entries.push(entry);
         }
 
         let json = if entries.is_empty() {

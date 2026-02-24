@@ -15,5 +15,6 @@ chrono = "0.4"
 clap = { version = "4", features = ["derive"] }
 kamadak-exif = "0.5"
 image = "0.25"
+rayon = "1.10"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
