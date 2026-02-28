@@ -16,6 +16,7 @@ const DEFAULT_PUBLIC_DIR: &str = "public";
 const TEMPLATE_INDEX: &str = include_str!("../../template/index.html");
 const TEMPLATE_STYLE: &str = include_str!("../../template/public/style.css");
 const TEMPLATE_JS: &str = include_str!("../../template/public/clutterlog.js");
+const TEMPLATE_GITHUB_ACTION: &str = include_str!("../../template/github_action.yaml");
 
 pub struct BuildReport {
     pub items_processed: usize,
@@ -112,12 +113,12 @@ impl Website {
     }
 
     pub fn new(path: &Path) -> Result<Self, WebsiteError> {
-        if path.join(SITE_TOML).exists() {
+        let website = if path.join(SITE_TOML).exists() {
             let info = WebsiteInfo::from_file(path)?;
-            Ok(Self {
+            Self {
                 info,
                 path: path.to_path_buf(),
-            })
+            }
         } else {
             fs::create_dir_all(path).map_err(|e| WebsiteError::Io(path.to_path_buf(), e))?;
 
@@ -135,11 +136,21 @@ impl Website {
             let file_path = path.join(SITE_TOML);
             fs::write(&file_path, &toml_content).map_err(|e| WebsiteError::Io(file_path, e))?;
 
-            Ok(Self {
+            Self {
                 info,
                 path: path.to_path_buf(),
-            })
-        }
+            }
+        };
+
+        // Always write (or overwrite) the GitHub Actions deploy workflow
+        let workflows_path = path.join(".github").join("workflows");
+        fs::create_dir_all(&workflows_path)
+            .map_err(|e| WebsiteError::Io(workflows_path.clone(), e))?;
+        let deploy_path = workflows_path.join("deploy.yml");
+        fs::write(&deploy_path, TEMPLATE_GITHUB_ACTION)
+            .map_err(|e| WebsiteError::Io(deploy_path, e))?;
+
+        Ok(website)
     }
 
     pub fn build(&self) -> Result<BuildReport, WebsiteError> {
