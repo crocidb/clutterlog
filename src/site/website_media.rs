@@ -20,7 +20,7 @@ pub struct GenerationResult {
     pub image_url: String,
 }
 
-pub struct WebsiteItem {
+pub struct WebsiteMedia {
     pub filename: String,
     pub title: String,
     pub datetime: String,
@@ -28,7 +28,7 @@ pub struct WebsiteItem {
     pub source_path: PathBuf,
 }
 
-impl WebsiteItem {
+impl WebsiteMedia {
     pub fn from_path(path: &Path, datetime: Option<&str>) -> Option<Self> {
         if !path.is_file() {
             return None;

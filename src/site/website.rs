@@ -7,7 +7,7 @@ use rayon::prelude::*;
 
 use super::media_library::{MediaLibrary, MediaLibraryError};
 use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
-use super::website_item::{GenerationResult, WebsiteItem};
+use super::website_media::{GenerationResult, WebsiteMedia};
 
 const DEFAULT_BUILD_DIR: &str = "build";
 const DEFAULT_MEDIA_DIR: &str = "media";
@@ -247,7 +247,7 @@ impl Website {
         let processed: Vec<Result<(GenerationResult, String, String), WebsiteError>> = items
             .par_iter()
             .filter_map(|(path, datetime)| {
-                let item = WebsiteItem::from_path(path, datetime.as_deref())?;
+                let item = WebsiteMedia::from_path(path, datetime.as_deref())?;
                 let result = item.copy_and_generate_thumb(dest_path);
                 let entry = item.to_json_entry(base_url, DEFAULT_MEDIA_DIR);
                 let rss_item = item.to_rss_item(base_url, DEFAULT_MEDIA_DIR);

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::website_item::SUPPORTED_EXTENSIONS;
+use super::website_media::SUPPORTED_EXTENSIONS;
 
 const CLUTTERLOG_DIR: &str = ".clutterlog";
 const METAMEDIA_TOML: &str = "metamedia.toml";
