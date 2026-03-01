@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use rayon::prelude::*;
 
 use super::media_library::{MediaLibrary, MediaLibraryError};
-use super::website_info::{WebsiteInfo, WebsiteInfoError, SITE_TOML};
+use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
 use super::website_media::{GenerationResult, WebsiteMedia};
 
 const DEFAULT_BUILD_DIR: &str = "build";
