@@ -206,15 +206,35 @@ impl WebsiteItem {
         let item_link = format!("{}/#media={}", base_url, self.filename);
         let pub_date = datetime_to_rfc2822(&self.datetime);
         let mime = mime_type(&self.extension);
+        let description = "";
+
+        let media_html = if self.is_animated() && matches!(self.extension.as_str(), "webm" | "mp4")
+        {
+            format!("<video src=\"{}\" controls></video>", image_url)
+        } else {
+            format!(
+                "<img src=\"{}\" alt=\"{}\"/>",
+                image_url,
+                escape_html_attr(&self.title)
+            )
+        };
+
+        let html_content = format!(
+            "<![CDATA[<h2>{}</h2>{}<p>{}</p>]]>",
+            escape_html(&self.title),
+            media_html,
+            escape_html(description),
+        );
 
         format!(
-            "        <item>\n            <title>{}</title>\n            <link>{}</link>\n            <guid>{}</guid>\n            <pubDate>{}</pubDate>\n            <enclosure url=\"{}\" type=\"{}\" length=\"0\"/>\n        </item>",
+            "        <item>\n            <title>{}</title>\n            <link>{}</link>\n            <guid>{}</guid>\n            <pubDate>{}</pubDate>\n            <enclosure url=\"{}\" type=\"{}\" length=\"0\"/>\n            <description>{}</description>\n        </item>",
             escape_xml(&self.title),
             escape_xml(&item_link),
             escape_xml(&image_url),
             pub_date,
             escape_xml(&image_url),
             mime,
+            html_content,
         )
     }
 }
@@ -247,6 +267,19 @@ fn escape_xml(s: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
+}
+
+fn escape_html(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+fn escape_html_attr(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 fn center_crop_resize(img: &image::DynamicImage, size: u32) -> image::DynamicImage {
