@@ -2,7 +2,7 @@
 name = "clutterlog"
 version = "0.1.0"
 edition = "2024"
-description = "An uncurated timeline of unfinished projects"
+description = "really simple gallery SSG aimed at displaying project WIPs without much context"
 authors = [ "Bruno Croci <bruno@croci.me>" ]
 rust-version = "1.90"
 include = ["src/**/*", "template/**/*", "Cargo.toml", "Cargo.lock", "README.md"]
