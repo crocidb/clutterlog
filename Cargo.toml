@@ -1,6 +1,6 @@
 [package]
 name = "clutterlog"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "really simple gallery SSG aimed at displaying project WIPs without much context"
 authors = [ "Bruno Croci <bruno@croci.me>" ]
