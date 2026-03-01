@@ -91,17 +91,7 @@ When you add media files to your `media/` folder, clutterlog extracts the best a
 
 ## 🏷️ Media Title and Description
 
-By default, clutterlog uses the filename (without extension) as the display title for each media item. You can override this and add a description by placing a sidecar `.txt` file with the same name as the media file in the `media/` directory.
-
-**Description only** — a single-line `.txt` sets the description; the title stays as the filename stem:
-
-```
-media/
-  my-sketch.png
-  my-sketch.txt       ← "quick concept sketch from last night"
-```
-
-**Title and description** — if the file has more than one line, the first line becomes the title and all remaining lines become the description:
+By default, clutterlog uses the filename (without extension) as the display title for each media item. You can override this and add a description by placing a sidecar `.txt` file with the same name as the media file in the `media/` directory:
 
 ```
 media/
@@ -109,11 +99,7 @@ media/
   my-sketch.txt
 ```
 
-```
-Wizard Concept Art
-Quick sketch exploring the character design.
-Went through three iterations before landing on this silhouette.
-```
+If there's only one line in the file, **clutterlog** will use that as a `description`. If there's more than one line, the first line becomes the `title`, and the remaining lines are `description`.
 
 The title and description appear in the grid overlay on hover, in the lightbox viewer, and in the RSS feed.
 
