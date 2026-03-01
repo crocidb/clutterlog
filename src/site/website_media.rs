@@ -23,6 +23,7 @@ pub struct GenerationResult {
 pub struct WebsiteMedia {
     pub filename: String,
     pub title: String,
+    pub description: String,
     pub datetime: String,
     pub extension: String,
     pub source_path: PathBuf,
@@ -47,11 +48,31 @@ impl WebsiteMedia {
 
         let filename = path.file_name().and_then(|n| n.to_str())?.to_string();
 
-        let title = path
+        let stem = path
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("")
             .to_string();
+
+        // Check for a sidecar .txt file next to the media file
+        let (title, description) = {
+            let txt_path = path.with_extension("txt");
+            if txt_path.is_file() {
+                let content = fs::read_to_string(&txt_path).unwrap_or_default();
+                let lines: Vec<&str> = content.lines().collect();
+                if lines.len() >= 2 {
+                    let title = lines[0].trim().to_string();
+                    let description = lines[1..].join("\n").trim().to_string();
+                    (title, description)
+                } else if lines.len() == 1 {
+                    (stem.clone(), lines[0].trim().to_string())
+                } else {
+                    (stem.clone(), String::new())
+                }
+            } else {
+                (stem.clone(), String::new())
+            }
+        };
 
         let datetime = match datetime {
             Some(dt) => dt.to_string(),
@@ -64,6 +85,7 @@ impl WebsiteMedia {
         Some(Self {
             filename,
             title,
+            description,
             datetime,
             extension,
             source_path: path.to_path_buf(),
@@ -75,10 +97,14 @@ impl WebsiteMedia {
     }
 
     pub fn thumb_filename(&self) -> String {
+        let stem = Path::new(&self.filename)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or(&self.filename);
         if self.is_animated() {
-            format!("{}_thumb.webp", self.title)
+            format!("{}_thumb.webp", stem)
         } else {
-            format!("{}_thumb.{}", self.title, self.extension)
+            format!("{}_thumb.{}", stem, self.extension)
         }
     }
 
@@ -188,10 +214,11 @@ impl WebsiteMedia {
         let thumb_url = format!("{}/{}/{}", base_url, media_dir, self.thumb_filename());
 
         format!(
-            "            {{ \"image_url\": \"{}\", \"thumb_url\": \"{}\", \"title\": \"{}\", \"description\": \"\", \"datetime\": \"{}\" }}",
+            "            {{ \"image_url\": \"{}\", \"thumb_url\": \"{}\", \"title\": \"{}\", \"description\": \"{}\", \"datetime\": \"{}\" }}",
             escape_js(&image_url),
             escape_js(&thumb_url),
             escape_js(&self.title),
+            escape_js(&self.description),
             escape_js(&self.datetime),
         )
     }
@@ -206,7 +233,7 @@ impl WebsiteMedia {
         let item_link = format!("{}/#media={}", base_url, self.filename);
         let pub_date = datetime_to_rfc2822(&self.datetime);
         let mime = mime_type(&self.extension);
-        let description = "";
+        let description = self.description.as_str();
 
         let media_html = if self.is_animated() && matches!(self.extension.as_str(), "webm" | "mp4")
         {

@@ -124,6 +124,13 @@
         titleEl.textContent = entry.title;
         info.appendChild(titleEl);
 
+        if (entry.description) {
+            var descEl = document.createElement("div");
+            descEl.className = "lightbox-description";
+            descEl.textContent = entry.description;
+            info.appendChild(descEl);
+        }
+
         var dateEl = document.createElement("div");
         dateEl.className = "lightbox-date";
         dateEl.textContent = formatDate(entry.datetime);
