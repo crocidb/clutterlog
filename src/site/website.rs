@@ -6,17 +6,20 @@ use std::time::{Duration, Instant};
 use rayon::prelude::*;
 
 use super::media_library::{MediaLibrary, MediaLibraryError};
-use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
+use super::website_info::{WebsiteInfo, WebsiteInfoError, SITE_TOML};
 use super::website_item::{GenerationResult, WebsiteItem};
 
 const DEFAULT_BUILD_DIR: &str = "build";
 const DEFAULT_MEDIA_DIR: &str = "media";
 const DEFAULT_PUBLIC_DIR: &str = "public";
 
+const DEFAULT_FEED_FILE: &str = "feed.xml";
+
 const TEMPLATE_INDEX: &str = include_str!("../../template/index.html");
 const TEMPLATE_STYLE: &str = include_str!("../../template/public/style.css");
 const TEMPLATE_JS: &str = include_str!("../../template/public/clutterlog.js");
 const TEMPLATE_GITHUB_ACTION: &str = include_str!("../../template/github_action.yaml");
+const TEMPLATE_RSS: &str = include_str!("../../template/rss.xml");
 
 pub struct BuildReport {
     pub items_processed: usize,
@@ -171,7 +174,7 @@ impl Website {
         library.update_metadata(&source_media_path)?;
 
         // Scan source media directory, copy files, generate thumbnails, and collect data entries
-        let (clutterlog_data, generation_results) =
+        let (clutterlog_data, rss_items, generation_results) =
             self.scan_and_copy_media(&source_media_path, &build_media_path, &library)?;
 
         // Render index.html from template
@@ -183,6 +186,23 @@ impl Website {
 
         let index_path = build_path.join("index.html");
         fs::write(&index_path, &rendered).map_err(|e| WebsiteError::Io(index_path, e))?;
+
+        // Render and write feed.xml
+        let rss_items_str = if rss_items.is_empty() {
+            String::new()
+        } else {
+            format!("{}\n", rss_items.join("\n"))
+        };
+        let base_url = self.info.url.trim_end_matches('/');
+        let feed_url = format!("{}/", base_url);
+        let rss_rendered = TEMPLATE_RSS
+            .replace("{{title}}", &escape_html(&self.info.title))
+            .replace("{{url}}", &escape_html(&feed_url))
+            .replace("{{description}}", &escape_html(&self.info.description))
+            .replace("{{items}}", &rss_items_str);
+
+        let rss_path = build_path.join(DEFAULT_FEED_FILE);
+        fs::write(&rss_path, &rss_rendered).map_err(|e| WebsiteError::Io(rss_path, e))?;
 
         // Write static assets
         let style_path = public_path.join("style.css");
@@ -202,11 +222,11 @@ impl Website {
         source_path: &Path,
         dest_path: &Path,
         library: &MediaLibrary,
-    ) -> Result<(String, Vec<GenerationResult>), WebsiteError> {
+    ) -> Result<(String, Vec<String>, Vec<GenerationResult>), WebsiteError> {
         let base_url = self.info.url.trim_end_matches('/');
 
         if !source_path.exists() {
-            return Ok(("[]".to_string(), Vec::new()));
+            return Ok(("[]".to_string(), Vec::new(), Vec::new()));
         }
 
         let dir_entries = fs::read_dir(source_path)
@@ -224,23 +244,30 @@ impl Website {
             .collect();
 
         // Process items in parallel: copy files and generate thumbnails
-        let processed: Vec<Result<(GenerationResult, String), WebsiteError>> = items
+        let processed: Vec<Result<(GenerationResult, String, String), WebsiteError>> = items
             .par_iter()
             .filter_map(|(path, datetime)| {
                 let item = WebsiteItem::from_path(path, datetime.as_deref())?;
                 let result = item.copy_and_generate_thumb(dest_path);
                 let entry = item.to_json_entry(base_url, DEFAULT_MEDIA_DIR);
-                Some(result.map(|r| (r, entry)))
+                let rss_item = item.to_rss_item(base_url, DEFAULT_MEDIA_DIR);
+                let image_url = item.image_url(base_url, DEFAULT_MEDIA_DIR);
+                Some(result.map(|mut r| {
+                    r.image_url = image_url;
+                    (r, entry, rss_item)
+                }))
             })
             .collect();
 
         // Collect results, propagating any errors
         let mut results: Vec<GenerationResult> = Vec::new();
         let mut entries: Vec<String> = Vec::new();
+        let mut rss_items: Vec<String> = Vec::new();
         for item_result in processed {
-            let (gen_result, entry) = item_result?;
+            let (gen_result, entry, rss_item) = item_result?;
             results.push(gen_result);
             entries.push(entry);
+            rss_items.push(rss_item);
         }
 
         let json = if entries.is_empty() {
@@ -249,7 +276,7 @@ impl Website {
             format!("[\n{}\n        ]", entries.join(",\n"))
         };
 
-        Ok((json, results))
+        Ok((json, rss_items, results))
     }
 }
 

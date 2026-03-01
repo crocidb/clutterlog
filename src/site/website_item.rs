@@ -15,9 +15,9 @@ pub const SUPPORTED_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "gif",
 const THUMB_SIZE: u32 = 350;
 
 pub struct GenerationResult {
-    pub filename: String,
     pub media_size: u64,
     pub thumb_size: u64,
+    pub image_url: String,
 }
 
 pub struct WebsiteItem {
@@ -106,9 +106,9 @@ impl WebsiteItem {
             .len();
 
         Ok(GenerationResult {
-            filename: self.filename.clone(),
             media_size,
             thumb_size,
+            image_url: String::new(), // filled in by scan_and_copy_media
         })
     }
 
@@ -195,6 +195,58 @@ impl WebsiteItem {
             escape_js(&self.datetime),
         )
     }
+
+    pub fn image_url(&self, base_url: &str, media_dir: &str) -> String {
+        format!("{}/{}/{}", base_url, media_dir, self.filename)
+    }
+
+    pub fn to_rss_item(&self, base_url: &str, media_dir: &str) -> String {
+        let base_url = base_url.trim_end_matches('/');
+        let image_url = self.image_url(base_url, media_dir);
+        let item_link = format!("{}/#media={}", base_url, self.filename);
+        let pub_date = datetime_to_rfc2822(&self.datetime);
+        let mime = mime_type(&self.extension);
+
+        format!(
+            "        <item>\n            <title>{}</title>\n            <link>{}</link>\n            <guid>{}</guid>\n            <pubDate>{}</pubDate>\n            <enclosure url=\"{}\" type=\"{}\" length=\"0\"/>\n        </item>",
+            escape_xml(&self.title),
+            escape_xml(&item_link),
+            escape_xml(&image_url),
+            pub_date,
+            escape_xml(&image_url),
+            mime,
+        )
+    }
+}
+
+fn mime_type(extension: &str) -> &'static str {
+    match extension {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "webm" => "video/webm",
+        "mp4" => "video/mp4",
+        _ => "application/octet-stream",
+    }
+}
+
+fn datetime_to_rfc2822(datetime: &str) -> String {
+    use chrono::NaiveDateTime;
+    NaiveDateTime::parse_from_str(datetime, "%Y-%m-%dT%H:%M:%S")
+        .map(|ndt| {
+            let dt = ndt.and_utc();
+            dt.format("%a, %d %b %Y %H:%M:%S +0000").to_string()
+        })
+        .unwrap_or_else(|_| datetime.to_string())
+}
+
+fn escape_xml(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
 }
 
 fn center_crop_resize(img: &image::DynamicImage, size: u32) -> image::DynamicImage {

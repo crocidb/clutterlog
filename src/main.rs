@@ -1,9 +1,9 @@
-mod website;
+mod site;
 
 use std::path::Path;
 
 use clap::{Parser, Subcommand};
-use website::{MediaLibrary, Website};
+use site::{MediaLibrary, Website};
 
 #[derive(Parser)]
 #[command(author, version, about)]
