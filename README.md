@@ -1,29 +1,25 @@
 <h1 align="center">clutterlog</h1>
-<p align="center">A way to display your WIPs</p>
+<p align="center">really simple gallery SSG aimed at displaying project WIPs without much context</p>
 
 <p align="center">
   <img src="media/clutterlog-example.gif" alt="clutterlog gallery demo" width="720">
 </p>
 
-**clutterlog** is a static gallery website generator for your creative WIPs. Drop photos, GIFs, and videos into a folder and clutterlog builds a self-contained, dark-themed gallery site that displays them in chronological order. No curation, no context, just a dump of your creative mess. Let people see how you create.
+**clutterlog** is a static gallery website generator for your creative WIPs. Drop photos, GIFs, and videos into a folder and clutterlog builds gallery site that displays them in chronological order. No curation, no context, just a dump of your creative mess. Let people see how you create.
 
 ## ✨ Features
 
-- 🖼️ **Multiple media formats** — PNG, JPEG, WebP, GIF, MP4, and WebM
-- 🔲 **Automatic thumbnails** — Center-cropped, square thumbnails for every media file using Lanczos3 resampling
-- 🎞️ **Animated thumbnails** — GIFs and videos get 2-second looping animated WebP thumbnails (via ffmpeg)
-- 📅 **EXIF date extraction** — Reads `DateTimeOriginal`, `DateTimeDigitized`, and `DateTime` tags from images to determine when media was actually created
-- 💾 **Persistent metadata** — Stores extracted dates in `.clutterlog/metamedia.toml` so they survive git operations (see [Media Metadata](#-media-metadata))
-- 🌙 **Responsive dark-themed gallery** — CSS Grid layout that adapts from desktop to mobile
-- 🔍 **Lightbox viewer** — Full-screen media viewer with zoom controls, keyboard navigation, and previous/next browsing
-- 🔗 **Deep linking** — Each media item is addressable via URL hash (`#media=filename`), supporting direct links and browser back/forward
-- 🦥 **Lazy loading** — Thumbnails load on demand for fast initial page loads
-- 📦 **Self-contained output** — The `build/` directory is a complete static site with no external dependencies
+- **Multiple media formats**: PNG, JPEG, WebP, GIF, MP4, and WebM
+- **Automatic thumbnails**: center-cropped, square thumbnails for every media file
+- **Animated thumbnails**: GIFs and videos get 2-second looping animated WebP thumbnails
+- **Lazy loading**: thumbnails load on demand for fast initial page loads
+- **Deep linking**: each media item is addressable via URL hash (`#media=filename`), supporting direct links and browser back/forward
+- **Lightbox viewer**: fullscreen media viewer with zoom controls, keyboard navigation, and previous/next browsing
 
 ## 📋 Prerequisites
 
-- 🦀 **Rust** 1.90 or later
-- 🎬 **ffmpeg** (optional) — Required only for generating animated thumbnails from GIFs, WebM, and MP4 files. Static image thumbnails work without it.
+- **Rust**: 1.90 or later, only if you're installing it with `cargo`
+- **ffmpeg**: required for generating animated thumbnails from GIFs, WebM, and MP4 files
 
 ## 📥 Install
 
@@ -112,17 +108,6 @@ build/
 ```
 
 This directory is a self-contained static site ready to be deployed to any static hosting service (GitHub Pages, Netlify, Cloudflare Pages, etc). 🚀
-
-## 🎨 Gallery Features
-
-The generated site includes a responsive grid gallery with:
-
-- 🏷️ **Hover overlays** showing the title and date of each item
-- 🔍 **Lightbox viewer** for full-screen browsing with previous/next navigation
-- 🔎 **Zoom controls** — zoom in, zoom out, and reset to 1:1 via buttons, keyboard (`+`/`-`/`0`), or mouse wheel
-- ⌨️ **Keyboard navigation** — arrow keys for previous/next, Escape to close
-- 🔗 **Deep linking** — URL hash updates when viewing items, so you can share direct links
-- ▶️ **Video playback** — MP4 and WebM files play inline with native controls, autoplay, and looping
 
 ## 📄 License
 
