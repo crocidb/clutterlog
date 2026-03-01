@@ -47,7 +47,7 @@ impl MediaLibrary {
             let content = fs::read_to_string(&file_path)
                 .map_err(|e| MediaLibraryError::Io(file_path.clone(), e))?;
             let meta_file: MetaMediaFile = toml::from_str(&content)
-                .map_err(|e| MediaLibraryError::Parse(file_path.clone(), e))?;
+                .map_err(|e| MediaLibraryError::Parse(file_path.clone(), Box::new(e)))?;
             Ok(Self {
                 entries: meta_file.media,
                 path: file_path,
@@ -207,7 +207,7 @@ fn extract_exif_date(path: &Path) -> Option<DateTime<Utc>> {
 #[derive(Debug)]
 pub enum MediaLibraryError {
     Io(PathBuf, io::Error),
-    Parse(PathBuf, toml::de::Error),
+    Parse(PathBuf, Box<toml::de::Error>),
     Serialize(toml::ser::Error),
 }
 

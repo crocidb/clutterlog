@@ -286,8 +286,8 @@ impl Website {
 pub enum WebsiteError {
     NotASite(PathBuf),
     NotAPath(PathBuf),
-    Info(WebsiteInfoError),
-    MediaLibrary(MediaLibraryError),
+    Info(Box<WebsiteInfoError>),
+    MediaLibrary(Box<MediaLibraryError>),
     Io(PathBuf, io::Error),
     Serialize(toml::ser::Error),
     Image(PathBuf, image::ImageError),
@@ -344,13 +344,13 @@ impl std::error::Error for WebsiteError {}
 
 impl From<WebsiteInfoError> for WebsiteError {
     fn from(err: WebsiteInfoError) -> Self {
-        WebsiteError::Info(err)
+        WebsiteError::Info(Box::new(err))
     }
 }
 
 impl From<MediaLibraryError> for WebsiteError {
     fn from(err: MediaLibraryError) -> Self {
-        WebsiteError::MediaLibrary(err)
+        WebsiteError::MediaLibrary(Box::new(err))
     }
 }
 

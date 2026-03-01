@@ -31,8 +31,8 @@ impl WebsiteInfo {
         let file_path = path.join(SITE_TOML);
         let content = fs::read_to_string(&file_path)
             .map_err(|e| WebsiteInfoError::Io(file_path.clone(), e))?;
-        let info: WebsiteInfo =
-            toml::from_str(&content).map_err(|e| WebsiteInfoError::Parse(file_path, e))?;
+        let info: WebsiteInfo = toml::from_str(&content)
+            .map_err(|e| WebsiteInfoError::Parse(file_path, Box::new(e)))?;
         Ok(info)
     }
 }
@@ -42,7 +42,7 @@ impl WebsiteInfo {
 #[derive(Debug)]
 pub enum WebsiteInfoError {
     Io(PathBuf, io::Error),
-    Parse(PathBuf, toml::de::Error),
+    Parse(PathBuf, Box<toml::de::Error>),
 }
 
 impl std::fmt::Display for WebsiteInfoError {
