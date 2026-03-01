@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use rayon::prelude::*;
 
 use super::media_library::{MediaLibrary, MediaLibraryError};
-use super::website_info::{SITE_TOML, WebsiteInfo, WebsiteInfoError};
+use super::website_info::{WebsiteInfo, WebsiteInfoError, SITE_TOML};
 use super::website_media::{GenerationResult, WebsiteMedia};
 
 const DEFAULT_BUILD_DIR: &str = "build";
@@ -23,18 +23,24 @@ const TEMPLATE_RSS: &str = include_str!("../../template/rss.xml");
 
 pub struct BuildReport {
     pub items_processed: usize,
+    pub items_skipped: usize,
     pub total_media_size: u64,
     pub total_thumbs_size: u64,
     pub processing_time: Duration,
 }
 
 impl BuildReport {
-    fn from_results(results: Vec<GenerationResult>, processing_time: Duration) -> Self {
+    fn from_results(
+        results: Vec<GenerationResult>,
+        items_skipped: usize,
+        processing_time: Duration,
+    ) -> Self {
         let items_processed = results.len();
         let total_media_size = results.iter().map(|r| r.media_size).sum();
         let total_thumbs_size = results.iter().map(|r| r.thumb_size).sum();
         Self {
             items_processed,
+            items_skipped,
             total_media_size,
             total_thumbs_size,
             processing_time,
@@ -46,6 +52,7 @@ impl std::fmt::Display for BuildReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Build report:")?;
         writeln!(f, "  Items processed: {}", self.items_processed)?;
+        writeln!(f, "  Items skipped (up to date): {}", self.items_skipped)?;
         writeln!(
             f,
             "  Total media size: {}",
@@ -174,7 +181,7 @@ impl Website {
         library.update_metadata(&source_media_path)?;
 
         // Scan source media directory, copy files, generate thumbnails, and collect data entries
-        let (clutterlog_data, rss_items, generation_results) =
+        let (clutterlog_data, rss_items, generation_results, items_skipped) =
             self.scan_and_copy_media(&source_media_path, &build_media_path, &library)?;
 
         // Render index.html from template
@@ -213,6 +220,7 @@ impl Website {
 
         Ok(BuildReport::from_results(
             generation_results,
+            items_skipped,
             start.elapsed(),
         ))
     }
@@ -222,11 +230,11 @@ impl Website {
         source_path: &Path,
         dest_path: &Path,
         library: &MediaLibrary,
-    ) -> Result<(String, Vec<String>, Vec<GenerationResult>), WebsiteError> {
+    ) -> Result<(String, Vec<String>, Vec<GenerationResult>, usize), WebsiteError> {
         let base_url = self.info.url.trim_end_matches('/');
 
         if !source_path.exists() {
-            return Ok(("[]".to_string(), Vec::new(), Vec::new()));
+            return Ok(("[]".to_string(), Vec::new(), Vec::new(), 0));
         }
 
         let dir_entries = fs::read_dir(source_path)
@@ -243,18 +251,25 @@ impl Website {
             })
             .collect();
 
-        // Process items in parallel: copy files and generate thumbnails
-        let processed: Vec<Result<(GenerationResult, String, String), WebsiteError>> = items
+        // Process items in parallel: copy files and generate thumbnails (skipping up-to-date items)
+        // Each result includes a bool indicating whether the item was skipped.
+        let processed: Vec<Result<(GenerationResult, String, String, bool), WebsiteError>> = items
             .par_iter()
             .filter_map(|(path, datetime)| {
                 let item = WebsiteMedia::from_path(path, datetime.as_deref())?;
-                let result = item.copy_and_generate_thumb(dest_path);
+
+                let (result, skipped) = if item.is_up_to_date(dest_path) {
+                    (item.read_existing_sizes(dest_path), true)
+                } else {
+                    (item.copy_and_generate_thumb(dest_path), false)
+                };
+
                 let entry = item.to_json_entry(base_url, DEFAULT_MEDIA_DIR);
                 let rss_item = item.to_rss_item(base_url, DEFAULT_MEDIA_DIR);
                 let image_url = item.image_url(base_url, DEFAULT_MEDIA_DIR);
                 Some(result.map(|mut r| {
                     r.image_url = image_url;
-                    (r, entry, rss_item)
+                    (r, entry, rss_item, skipped)
                 }))
             })
             .collect();
@@ -263,8 +278,12 @@ impl Website {
         let mut results: Vec<GenerationResult> = Vec::new();
         let mut entries: Vec<String> = Vec::new();
         let mut rss_items: Vec<String> = Vec::new();
+        let mut items_skipped: usize = 0;
         for item_result in processed {
-            let (gen_result, entry, rss_item) = item_result?;
+            let (gen_result, entry, rss_item, skipped) = item_result?;
+            if skipped {
+                items_skipped += 1;
+            }
             results.push(gen_result);
             entries.push(entry);
             rss_items.push(rss_item);
@@ -276,7 +295,7 @@ impl Website {
             format!("[\n{}\n        ]", entries.join(",\n"))
         };
 
-        Ok((json, rss_items, results))
+        Ok((json, rss_items, results, items_skipped))
     }
 }
 

@@ -108,6 +108,50 @@ impl WebsiteMedia {
         }
     }
 
+    /// Check whether the processed output (copied media + thumbnail) in `dest_media`
+    /// is already up to date with respect to the source media file.
+    /// Returns `true` if both output files exist and the thumbnail is newer than the source.
+    pub fn is_up_to_date(&self, dest_media: &Path) -> bool {
+        let dest_file = dest_media.join(&self.filename);
+        let thumb_file = dest_media.join(self.thumb_filename());
+
+        let thumb_mtime = match fs::metadata(&thumb_file).and_then(|m| m.modified()) {
+            Ok(t) => t,
+            Err(_) => return false,
+        };
+
+        let dest_mtime = match fs::metadata(&dest_file).and_then(|m| m.modified()) {
+            Ok(t) => t,
+            Err(_) => return false,
+        };
+
+        let source_mtime = match fs::metadata(&self.source_path).and_then(|m| m.modified()) {
+            Ok(t) => t,
+            Err(_) => return false,
+        };
+
+        thumb_mtime >= source_mtime && dest_mtime >= source_mtime
+    }
+
+    /// Read file sizes from already-processed output files without regenerating them.
+    pub fn read_existing_sizes(&self, dest_media: &Path) -> Result<GenerationResult, WebsiteError> {
+        let dest_file = dest_media.join(&self.filename);
+        let thumb_file = dest_media.join(self.thumb_filename());
+
+        let media_size = fs::metadata(&dest_file)
+            .map_err(|e| WebsiteError::Io(dest_file, e))?
+            .len();
+        let thumb_size = fs::metadata(&thumb_file)
+            .map_err(|e| WebsiteError::Io(thumb_file, e))?
+            .len();
+
+        Ok(GenerationResult {
+            media_size,
+            thumb_size,
+            image_url: String::new(),
+        })
+    }
+
     pub fn copy_and_generate_thumb(
         &self,
         dest_media: &Path,
